@@ -15,3 +15,8 @@ piper-tts
 python -c "import numpy, sounddevice, soundfile, requests, vosk; print('Core OK')"
 python -c "import faster_whisper; print('Whisper OK')"
 python -c "import piper; print('Piper OK')"
+
+
+
+for testing run: 
+python -m pytest -v -rA
