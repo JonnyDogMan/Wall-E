@@ -29,7 +29,7 @@ PREFERRED_INPUT_INDEX = 8  # RØDE NT-USB Mini
 #PYTHON_EXE = r"C:\Users\SkillsHub-Learner-12\AppData\Local\Programs\Python\Python312\python.exe"
 PYTHON_EXE = r"C:\Users\Jonny Nour\AppData\Local\Microsoft\WindowsApps\python.exe"
 #PIPER_MODEL_PRIMARY = r"C:\Users\SkillsHub-Learner-12\Documents\AI_Robot\voices\en_US-amy-medium.onnx"
-PIPER_MODEL_PRIMARY = r"C:\Users\SkillsHub-Learner-12\Documents\AI_Robot\voices\en_US-amy-medium.onnx"
+PIPER_MODEL_PRIMARY = r"D:\Jonny_Git_Code\Wall-E\voicesen_US-amy-medium.onnx"
 PIPER_MODEL_FALLBACK = r""
 
 OLLAMA_BASE = "http://127.0.0.1:11434"
