@@ -2,8 +2,6 @@
 """
 Wall-E AI Assistant (PC) + Reliable Face + Hard Error Trapping
 
-@author Jonny
-
 Fixes included:
 - Blink spam fix: blink only when NOT LISTENING and NOT SPEAKING
 - Blink thread safety: stop old thread before starting new one
@@ -24,10 +22,13 @@ import requests
 
 # ================= CONFIG =================
 
-DEFAULT_VOSK_PATH = r"C:\Users\SkillsHub-Learner-12\Documents\AI_Robot\vosk-model-en-us-0.22"
+#DEFAULT_VOSK_PATH = r"C:\Users\SkillsHub-Learner-12\Documents\AI_Robot\vosk-model-en-us-0.22"
+DEFAULT_VOSK_PATH = r"D:\Jonny_Git_Code\Wall-E\vosk-model-en-us-0.22"
 PREFERRED_INPUT_INDEX = 8  # RØDE NT-USB Mini
 
-PYTHON_EXE = r"C:\Users\SkillsHub-Learner-12\AppData\Local\Programs\Python\Python312\python.exe"
+#PYTHON_EXE = r"C:\Users\SkillsHub-Learner-12\AppData\Local\Programs\Python\Python312\python.exe"
+PYTHON_EXE = r"C:\Users\Jonny Nour\AppData\Local\Microsoft\WindowsApps\python.exe"
+#PIPER_MODEL_PRIMARY = r"C:\Users\SkillsHub-Learner-12\Documents\AI_Robot\voices\en_US-amy-medium.onnx"
 PIPER_MODEL_PRIMARY = r"C:\Users\SkillsHub-Learner-12\Documents\AI_Robot\voices\en_US-amy-medium.onnx"
 PIPER_MODEL_FALLBACK = r""
 
@@ -58,9 +59,9 @@ LISTENING = threading.Event()
 
 def log_err(tag: str, exc: BaseException) -> None:
     """
-    Logs an error with timestamp and traceback to both file and console.
+    Logs an error with timestamp to both file and console.
     
-    @param tag: A string identifier/tag for the error context (e.g., "Record", "TTS")
+    @param tag: Identifier tag for the error source (e.g., "Record", "TTS", "Ollama")
     @param exc: The exception object to log
     @return: None
     """
@@ -80,12 +81,12 @@ BLINK_THREAD: Optional[threading.Thread] = None
 
 def pico_request(method: str, endpoint: str, timeout: float = 1.2) -> Optional[str]:
     """
-    Sends an HTTP request to the Pico face control endpoint.
+    Sends an HTTP request to the Pico microcontroller.
     
     @param method: HTTP method ("GET" or "POST")
-    @param endpoint: The API endpoint path (e.g., "/ping", "/open")
+    @param endpoint: API endpoint path (e.g., "/ping", "/open", "/blink")
     @param timeout: Request timeout in seconds (default: 1.2)
-    @return: Response text if successful, None otherwise
+    @return: Response text if successful, None on error or if PICO_ENABLED is False
     """
     if not PICO_ENABLED:
         return None
@@ -101,7 +102,7 @@ def pico_request(method: str, endpoint: str, timeout: float = 1.2) -> Optional[s
 
 def pico_ok() -> bool:
     """
-    Checks if the Pico face controller is reachable and responding.
+    Checks if the Pico microcontroller is responsive.
     
     @return: True if Pico responds with "pong", False otherwise
     """
@@ -112,10 +113,10 @@ def pico_post_reliable(endpoint: str, tries: int = 6, delay_s: float = 0.20) -> 
     """
     Sends a POST request to Pico with retry logic for reliability.
     
-    @param endpoint: The API endpoint path to POST to
+    @param endpoint: API endpoint path (e.g., "/open", "/close", "/blink")
     @param tries: Number of retry attempts (default: 6)
     @param delay_s: Delay between retries in seconds (default: 0.20)
-    @return: True if request succeeds within retries, False otherwise
+    @return: True if request succeeds within retry attempts, False otherwise
     """
     for _ in range(tries):
         t = pico_request("POST", endpoint, timeout=1.2)
@@ -126,7 +127,7 @@ def pico_post_reliable(endpoint: str, tries: int = 6, delay_s: float = 0.20) -> 
 
 def pico_wait_ready(max_wait_s: float = 6.0) -> bool:
     """
-    Waits for the Pico controller to become ready, polling until it responds.
+    Waits for the Pico microcontroller to become ready/responsive.
     
     @param max_wait_s: Maximum time to wait in seconds (default: 6.0)
     @return: True if Pico becomes ready within timeout, False otherwise
@@ -140,7 +141,7 @@ def pico_wait_ready(max_wait_s: float = 6.0) -> bool:
 
 def eyes_open() -> bool:
     """
-    Opens the robot's eyes.
+    Opens the robot's eyes via Pico microcontroller.
     
     @return: True if command succeeded, False otherwise
     """
@@ -148,7 +149,7 @@ def eyes_open() -> bool:
 
 def eyes_close() -> bool:
     """
-    Closes the robot's eyes.
+    Closes the robot's eyes via Pico microcontroller.
     
     @return: True if command succeeded, False otherwise
     """
@@ -156,7 +157,7 @@ def eyes_close() -> bool:
 
 def eyes_blink() -> bool:
     """
-    Performs a single blink animation.
+    Makes the robot blink once via Pico microcontroller.
     
     @return: True if command succeeded, False otherwise
     """
@@ -164,7 +165,7 @@ def eyes_blink() -> bool:
 
 def wink_left() -> bool:
     """
-    Performs a left eye wink animation.
+    Makes the robot wink with the left eye via Pico microcontroller.
     
     @return: True if command succeeded, False otherwise
     """
@@ -172,7 +173,7 @@ def wink_left() -> bool:
 
 def wink_right() -> bool:
     """
-    Performs a right eye wink animation.
+    Makes the robot wink with the right eye via Pico microcontroller.
     
     @return: True if command succeeded, False otherwise
     """
@@ -180,7 +181,7 @@ def wink_right() -> bool:
 
 def look_up() -> bool:
     """
-    Moves the eyes to look upward.
+    Moves the robot's eyes to look up via Pico microcontroller.
     
     @return: True if command succeeded, False otherwise
     """
@@ -188,7 +189,7 @@ def look_up() -> bool:
 
 def look_down() -> bool:
     """
-    Moves the eyes to look downward.
+    Moves the robot's eyes to look down via Pico microcontroller.
     
     @return: True if command succeeded, False otherwise
     """
@@ -196,7 +197,7 @@ def look_down() -> bool:
 
 def center_ud() -> bool:
     """
-    Centers the eyes vertically (neutral up/down position).
+    Centers the robot's eyes vertically (neutral up/down position) via Pico microcontroller.
     
     @return: True if command succeeded, False otherwise
     """
@@ -204,7 +205,7 @@ def center_ud() -> bool:
 
 def eyes_release() -> bool:
     """
-    Releases/resets the eye servos to their default state.
+    Releases/releases the robot's eye servos via Pico microcontroller.
     
     @return: True if command succeeded, False otherwise
     """
@@ -212,7 +213,7 @@ def eyes_release() -> bool:
 
 def stop_blinking() -> None:
     """
-    Stops the automatic blinking thread safely.
+    Stops the blinking thread and waits for it to finish.
     
     @return: None
     """
@@ -224,7 +225,8 @@ def stop_blinking() -> None:
 
 def blink_loop() -> None:
     """
-    Main loop for automatic blinking. Blinks at random intervals when not listening or speaking.
+    Main loop for autonomous blinking behavior.
+    Blinks at random intervals but only when not speaking or listening.
     
     @return: None
     """
@@ -242,7 +244,8 @@ def blink_loop() -> None:
 
 def start_blinking() -> None:
     """
-    Starts the automatic blinking thread. Stops any existing blink thread first.
+    Starts the autonomous blinking thread.
+    Stops any existing blink thread before starting a new one.
     
     @return: None
     """
@@ -254,7 +257,7 @@ def start_blinking() -> None:
 
 def face_neutral() -> None:
     """
-    Sets the face to a neutral expression (centers up/down gaze).
+    Sets the face to a neutral expression (centers up/down position).
     
     @return: None
     """
@@ -262,7 +265,9 @@ def face_neutral() -> None:
 
 def face_thinking_small() -> None:
     """
-    Animates a "thinking" expression with random up/down gaze movements and occasional winks.
+    Displays a "thinking" expression with random small movements.
+    Performs random up/down look (50% chance) and occasional wink (18% chance),
+    then centers the position.
     
     @return: None
     """
@@ -278,6 +283,7 @@ def face_thinking_small() -> None:
 def prefer_wasapi() -> None:
     """
     Sets the default audio host API to WASAPI (Windows Audio Session API) if available.
+    Improves audio performance on Windows systems.
     
     @return: None
     """
@@ -294,24 +300,24 @@ prefer_wasapi()
 
 class LiveLine:
     """
-    Utility class for live-updating console output (used for real-time transcription display).
-    
-    Uses ANSI escape codes to overwrite the current line in the terminal.
+    Provides live updating single-line console output with ANSI escape codes.
+    Used for displaying real-time transcription updates during voice recording.
     """
     CSI = "\x1b["
 
     def __init__(self, prefix: str = "You: ") -> None:
         """
-        Initializes a LiveLine instance with a prefix string.
+        Initializes a LiveLine instance.
         
-        @param prefix: Text to prepend to each line (default: "You: ")
+        @param prefix: Text prefix to display before the live text (default: "You: ")
+        @return: None
         """
         self.prefix = prefix
         self.buf = ""
 
     def clear(self) -> None:
         """
-        Clears the current terminal line.
+        Clears the current line using ANSI escape codes.
         
         @return: None
         """
@@ -320,9 +326,9 @@ class LiveLine:
 
     def print(self, text: str) -> None:
         """
-        Updates the current line with new text, overwriting previous content.
+        Updates the live line with new text, overwriting the previous content.
         
-        @param text: The text to display
+        @param text: Text to display on the live line
         @return: None
         """
         self.buf = text
@@ -332,9 +338,9 @@ class LiveLine:
 
     def finalize(self, final: str) -> None:
         """
-        Finalizes the line by clearing and printing the final text on a new line.
+        Finalizes the live line by clearing it and printing the final text as a new line.
         
-        @param final: The final text to print
+        @param final: Final text to display
         @return: None
         """
         self.clear()
@@ -342,10 +348,10 @@ class LiveLine:
 
 def model_config_exists(onnx_path: str) -> bool:
     """
-    Checks if a JSON configuration file exists for the given ONNX model path.
+    Checks if a configuration JSON file exists for the given ONNX model path.
     
     @param onnx_path: Path to the ONNX model file
-    @return: True if a corresponding JSON config file exists, False otherwise
+    @return: True if config file exists (either at onnx_path.json or model_name.json), False otherwise
     """
     if not onnx_path:
         return False
@@ -355,12 +361,10 @@ def model_config_exists(onnx_path: str) -> bool:
 
 def speak_text_blocking(text: str) -> None:
     """
-    Converts text to speech using Piper TTS and plays it synchronously.
+    Converts text to speech and plays it using Piper TTS engine.
+    Sets SPEAKING event flag during execution. Tries primary model first, falls back to secondary.
     
-    Uses primary model first, falls back to fallback model if available.
-    Sets SPEAKING event flag during playback.
-    
-    @param text: The text to synthesize and speak
+    @param text: Text to convert to speech and play
     @return: None
     """
     text = (text or "").strip()
@@ -420,8 +424,9 @@ def speak_text_blocking(text: str) -> None:
 def load_whisper():
     """
     Loads a Whisper speech recognition model (prefers faster-whisper, falls back to openai-whisper).
+    Returns a transcription function.
     
-    @return: A transcription function that takes a WAV file path and returns transcribed text
+    @return: Function that takes an audio file path and returns transcribed text as string
     """
     try:
         from faster_whisper import WhisperModel
@@ -446,9 +451,9 @@ def load_whisper():
 
 def ollama_healthy() -> bool:
     """
-    Checks if the Ollama LLM service is running and accessible.
+    Checks if the Ollama API server is running and responsive.
     
-    @return: True if Ollama responds successfully, False otherwise
+    @return: True if Ollama server responds successfully, False otherwise
     """
     try:
         return requests.get(f"{OLLAMA_BASE}/api/version", timeout=3).ok
@@ -457,10 +462,10 @@ def ollama_healthy() -> bool:
 
 def ollama_chat_once(messages: List[Dict]) -> str:
     """
-    Sends a chat request to Ollama and returns the assistant's response.
+    Sends a chat request to Ollama API and returns the response.
     
-    @param messages: List of message dictionaries with "role" and "content" keys
-    @return: The assistant's reply text from Ollama
+    @param messages: List of message dictionaries with "role" and "content" keys (conversation history)
+    @return: Response text from the AI assistant
     """
     payload = {
         "model": OLLAMA_MODEL,
@@ -481,14 +486,12 @@ def ollama_chat_once(messages: List[Dict]) -> str:
 
 def pick_input_device(preferred_index: int) -> int:
     """
-    Selects a valid audio input device index, prioritizing default, then preferred, then first available.
-    
     Always returns a real device index (never -1).
-    Priority: 1) sounddevice default input (if valid), 2) preferred index (if valid), 3) first device with input channels
-    
-    @param preferred_index: The preferred microphone device index
-    @return: A valid input device index
-    @raises RuntimeError: If no input devices are found
+
+    Priority:
+    1) sounddevice default input (if valid)
+    2) preferred index (if valid)
+    3) first device with input channels
     """
     devs = sd.query_devices()
 
@@ -520,7 +523,7 @@ def load_vosk_model(path: str):
     Loads a Vosk speech recognition model from the specified directory.
     
     @param path: Path to the Vosk model directory
-    @return: A Vosk Model instance
+    @return: Vosk Model object
     @raises RuntimeError: If the model directory does not exist
     """
     from vosk import Model
@@ -530,14 +533,13 @@ def load_vosk_model(path: str):
 
 def record_utterance(vosk_model, input_device: int) -> Tuple[str, str]:
     """
-    Records audio from the microphone and performs real-time speech recognition using Vosk.
+    Records audio from the microphone and performs real-time transcription using Vosk.
+    Stops recording after silence period (ENGLISH_GAP_MS) or max segment time (MAX_SEGMENT_MS).
+    Sets LISTENING event flag during execution.
     
-    Records until silence is detected or maximum segment time is reached.
-    Sets LISTENING event flag during recording.
-    
-    @param vosk_model: The loaded Vosk Model instance
-    @param input_device: The audio input device index to use
-    @return: A tuple containing (WAV file path, rough transcription text)
+    @param vosk_model: Loaded Vosk Model object for speech recognition
+    @param input_device: Audio input device index (will be fixed if -1)
+    @return: Tuple of (wav_file_path, rough_transcription_text)
     """
     from vosk import KaldiRecognizer
 
@@ -613,12 +615,11 @@ def record_utterance(vosk_model, input_device: int) -> Tuple[str, str]:
 
 def tidy_reply(text: str) -> str:
     """
-    Cleans and formats assistant replies by normalizing whitespace, limiting sentences, and truncating if needed.
+    Cleans and formats AI response text for optimal voice output.
+    Normalizes whitespace, limits to 3 sentences, truncates if too long, adds question if too short.
     
-    Limits to first 3 sentences, truncates to ~380 chars if longer, adds prompt if response is short.
-    
-    @param text: The raw reply text to process
-    @return: Formatted and cleaned reply text
+    @param text: Raw response text from AI
+    @return: Cleaned and formatted text suitable for speech synthesis
     """
     text = re.sub(r"\s+", " ", (text or "")).strip()
     sents = re.split(r"(?<=[.!?])\s+", text)
@@ -634,7 +635,8 @@ def tidy_reply(text: str) -> str:
 
 def cleanup_face():
     """
-    Performs cleanup of face control resources (stops blinking, closes eyes, releases servos).
+    Cleans up face control resources on shutdown.
+    Stops blinking thread and closes/releases eyes if Pico is enabled.
     
     @return: None
     """
@@ -651,11 +653,9 @@ def cleanup_face():
 
 def run_once():
     """
-    Main execution loop for a single Wall-E session.
-    
-    Initializes models, waits for Pico, then enters conversation loop:
-    records speech -> transcribes -> gets LLM response -> speaks reply.
-    Handles microphone silence detection and device re-selection.
+    Main execution loop for one session of the Wall-E AI assistant.
+    Initializes components, handles voice interaction loop, manages face expressions.
+    Runs until KeyboardInterrupt or critical error.
     
     @return: None
     @raises RuntimeError: If Ollama is not responding
@@ -761,9 +761,9 @@ def run_once():
 
 def main():
     """
-    Main entry point with supervisor loop that restarts run_once() on crashes.
-    
-    Implements exponential backoff for error recovery, with cleanup on shutdown.
+    Main entry point with supervisor/restart logic.
+    Runs the AI assistant with exponential backoff retry on crashes.
+    Cleans up resources on exit.
     
     @return: None
     """

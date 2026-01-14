@@ -8,6 +8,12 @@ from secrets import WIFI_SSID, WIFI_PASS
 # WiFi
 # ======================================================
 def connect_wifi():
+    """
+    Connects to WiFi network using credentials from secrets module.
+    
+    @return: IP address assigned to the device
+    @raises RuntimeError: If WiFi connection fails after 15 seconds
+    """
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
 
@@ -32,32 +38,66 @@ SERVO_FREQ = 50
 PERIOD_US = 20_000
 
 def us_to_duty(us: int) -> int:
+    """
+    Converts pulse width in microseconds to PWM duty cycle value (0-65535).
+    
+    @param us: Pulse width in microseconds
+    @return: PWM duty cycle value (16-bit integer)
+    """
     return int(int(us) * 65535 // PERIOD_US)
 
 class ServoLazy:
     """
-    Lazy PWM servo:
-    - No PWM at boot
-    - PWM starts only when moved
-    - PWM released after movement
+    Lazy PWM servo controller with on-demand PWM activation.
+    PWM is only enabled when movement is required and released after use.
+    This conserves power and prevents servo buzzing when idle.
     """
     def __init__(self, pin: int, start_us: int):
+        """
+        Initializes a ServoLazy instance.
+        
+        @param pin: GPIO pin number for the servo PWM signal
+        @param start_us: Initial pulse width in microseconds (neutral position)
+        @return: None
+        """
         self.pin = int(pin)
         self.current_us = int(start_us)
         self.pwm = None
 
     def enable(self):
+        """
+        Enables PWM on the servo pin if not already enabled.
+        Sets frequency and initial duty cycle to current position.
+        
+        @return: None
+        """
         if self.pwm is None:
             self.pwm = PWM(Pin(self.pin))
             self.pwm.freq(SERVO_FREQ)
             self.pwm.duty_u16(us_to_duty(self.current_us))
 
     def write(self, us: int):
+        """
+        Immediately sets servo position to specified pulse width.
+        Requires PWM to be enabled (call enable() first or use move()).
+        
+        @param us: Pulse width in microseconds
+        @return: None
+        """
         self.current_us = int(us)
         if self.pwm:
             self.pwm.duty_u16(us_to_duty(self.current_us))
 
     def move(self, target_us: int, step: int = 20, delay_ms: int = 6):
+        """
+        Smoothly moves servo from current position to target position.
+        Automatically enables PWM, moves in steps, then updates position.
+        
+        @param target_us: Target pulse width in microseconds
+        @param step: Step size in microseconds per iteration (default: 20)
+        @param delay_ms: Delay between steps in milliseconds (default: 6)
+        @return: None
+        """
         self.enable()
         target_us = int(target_us)
         cur = int(self.current_us)
@@ -76,6 +116,12 @@ class ServoLazy:
             time.sleep_ms(delay_ms)
 
     def release(self):
+        """
+        Releases PWM resources by deinitializing the PWM object.
+        Servo will no longer receive control signals.
+        
+        @return: None
+        """
         if self.pwm:
             try:
                 self.pwm.deinit()
@@ -115,17 +161,36 @@ LR = ServoLazy(5, LR_MID)
 # Movement helpers
 # ======================================================
 def enable_all_lids():
+    """
+    Enables PWM for all eyelid servos with staggered timing to reduce power surge.
+    
+    @return: None
+    """
     for k in ALL_LIDS:
         eyelids[k].enable()
         time.sleep_ms(50)
 
 def release_all():
+    """
+    Releases PWM resources for all servos (eyelids, up/down, left/right).
+    Stops all servo control signals to conserve power.
+    
+    @return: None
+    """
     for s in eyelids.values():
         s.release()
     UD.release()
     LR.release()
 
 def move_group(names, state: str):
+    """
+    Synchronously moves a group of eyelid servos to the specified state.
+    All servos in the group move together in synchronized steps.
+    
+    @param names: Tuple or list of servo names (e.g., LEFT_EYE, RIGHT_EYE, ALL_LIDS)
+    @param state: Target state string ("open" or "closed")
+    @return: None
+    """
     enable_all_lids()
     cur = {n: eyelids[n].current_us for n in names}
     tgt = {n: SERVOS[n][state] for n in names}
@@ -149,49 +214,99 @@ def move_group(names, state: str):
         time.sleep_ms(6)
 
 def lids_open():
+    """
+    Opens all eyelids to the open position and releases PWM resources.
+    
+    @return: None
+    """
     move_group(ALL_LIDS, "open")
     release_all()
 
 def lids_close():
+    """
+    Closes all eyelids to the closed position and releases PWM resources.
+    
+    @return: None
+    """
     move_group(ALL_LIDS, "closed")
     release_all()
 
 def blink():
+    """
+    Performs a complete blink animation: close all lids, wait, then open.
+    
+    @return: None
+    """
     lids_close()
     time.sleep_ms(90)
     lids_open()
 
 def wink_left():
+    """
+    Performs a left eye wink: close left eye lids, wait, then open.
+    
+    @return: None
+    """
     move_group(LEFT_EYE, "closed")
     time.sleep_ms(110)
     move_group(LEFT_EYE, "open")
     release_all()
 
 def wink_right():
+    """
+    Performs a right eye wink: close right eye lids, wait, then open.
+    
+    @return: None
+    """
     move_group(RIGHT_EYE, "closed")
     time.sleep_ms(110)
     move_group(RIGHT_EYE, "open")
     release_all()
 
 def look_up():
+    """
+    Moves eyes to look up position and releases PWM resources.
+    
+    @return: None
+    """
     UD.move(UD_LIMITS["up"])
     UD.release()
 
 def look_down():
+    """
+    Moves eyes to look down position and releases PWM resources.
+    
+    @return: None
+    """
     UD.move(UD_LIMITS["down"])
     UD.release()
 
 def center_ud():
+    """
+    Centers the up/down eye position to neutral and releases PWM resources.
+    
+    @return: None
+    """
     UD.move(UD_MID)
     UD.release()
 
 def look_left():
+    """
+    Moves eyes to look left (centers first, then moves to left limit).
+    
+    @return: None
+    """
     LR.move(LR_MID)
     time.sleep_ms(120)
     LR.move(LR_LIMITS["left"])
     LR.release()
 
 def look_right():
+    """
+    Moves eyes to look right (centers first, then moves to right limit).
+    
+    @return: None
+    """
     LR.move(LR_MID)
     time.sleep_ms(120)
     LR.move(LR_LIMITS["right"])
@@ -201,6 +316,11 @@ def look_right():
 # Web UI (Wall-E)
 # ======================================================
 def homepage():
+    """
+    Returns HTML content for the Wall-E control panel web interface.
+    
+    @return: HTML string containing the control panel page
+    """
     return """<!doctype html>
 <html>
 <head>
@@ -251,6 +371,15 @@ function cmd(p){
 # HTTP server
 # ======================================================
 def reply(c, body, ctype="text/plain", code="200 OK"):
+    """
+    Sends an HTTP response to a client socket connection.
+    
+    @param c: Client socket object
+    @param body: Response body content (string)
+    @param ctype: Content-Type header value (default: "text/plain")
+    @param code: HTTP status code and message (default: "200 OK")
+    @return: None
+    """
     c.send(
         "HTTP/1.1 " + code + "\r\n"
         "Content-Type: " + ctype + "\r\n"
@@ -258,6 +387,14 @@ def reply(c, body, ctype="text/plain", code="200 OK"):
     )
 
 def server(ip):
+    """
+    Starts HTTP server on port 80 and handles incoming requests.
+    Routes requests to appropriate face control functions.
+    Runs indefinitely until program termination.
+    
+    @param ip: IP address to bind the server socket to
+    @return: None (runs indefinitely)
+    """
     s = socket.socket()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((ip, 80))

@@ -1,0 +1,37 @@
+# Voice model files (too large for GitHub)
+*.onnx
+
+# Voice model directory (optional - uncomment if you want to ignore entire directory)
+# voices/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+walle_errors.log
+
+# Temporary files
+*.tmp
+*.temp

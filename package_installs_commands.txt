@@ -1,0 +1,17 @@
+python -m pip install --upgrade pip
+
+python -m pip install ^
+numpy ^
+sounddevice ^
+soundfile ^
+requests ^
+vosk ^
+faster-whisper ^
+piper-tts
+
+
+#verify
+
+python -c "import numpy, sounddevice, soundfile, requests, vosk; print('Core OK')"
+python -c "import faster_whisper; print('Whisper OK')"
+python -c "import piper; print('Piper OK')"
